@@ -1,30 +1,77 @@
-var raw       = require( "raw-socket" )
-var timers    = require ( "timers" )
-var freegeoip = require( "node-freegeoip" )
+var raw       = require( 'raw-socket' )
+var timers    = require ( 'timers' )
+var freegeoip = require( 'node-freegeoip' )
+var columnify = require( 'columnify')
+var dns       = require( 'dns')
+
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
-var ip_list   = {}
+var ip_active = {}
 
 console.log( '\u001B[2J\u001B[0;0f' )
 console.log("Started listening ..please wait")
 
-socket.on( "message" , function( buffer , source ) {
-    if( source != null ){
-	ip_list[source] = { 
-	    source   : source,
-	    protocol : 'TCP'
+socket.on( "on" , function( buffer , addr ) {
+    
+    var packet = {
+	source    : addr,
+	location  : {},
+	protocol  : 'TCP',
+	connected  : new Date(),
+	last_heard : new Date(),
+	disconnected : false,
+    }
+    
+    freegeoip.getLocation(addr , function( err , local){
+	packet.location = local
+	ip_active[packet.source] = packet
+    })
+
+})
+socket.on( "message" , function( buffer , addr ) {
+    var packet = {
+	source : addr,
+	protocol : 'TCP',
+	discovered : new Date(),
+	last_heard : new Date(),
+	location : {
+	    country_name : 'N/A'
 	}
+    }
+    if( typeof(ip_active[addr]) == 'undefined' ){
+	    var packet = {
+		source   : addr,
+		location : {},
+		protocol : 'TCP',
+		discovered : new Date(),
+		last_heard : new Date(),
+	    }
+	
+	freegeoip.getLocation(addr , function( err , local){
+	    packet.location = local
+	    ip_active[packet.source] = packet
+	})
+    }else{
+	ip_active[packet.source].last_heard= new Date();
     }
 })
 
+
+socket.on( "close" , function( buffer , addr ) {
+    ip_active[packet.source].disconnected = new Date();
+    delete(ip_active[addr])
+})
+
+
 timers.setInterval(function(){
-    console.log( '\u001B[2J\u001B[0;0f' )
-    console.log( "Found these connections :" )
-    Object.keys(ip_list).forEach(function( item ) {	
-	freegeoip.getLocation( ip_list[item].source , function( err , local){
-	    console.log( ip_list[item].source + "\t" + ip_list[item].protocol + "\t" + local.country_name)
-	})
+    var connection_count = Object.keys(ip_active).length
+    
+    console.log( '\u001B[2J\u001B[0;0f' )    
+    console.log ( 'CONNECTION COUNT: ' + connection_count)
+
+    Object.keys(ip_active).forEach(function( item ) {
+	packet = ip_active[item]
+	console.log( packet.last_heard.toString() + "\t\t\t\t" + packet.source + "\t\t\t" + packet.location.country_name )
+	
     })
-},5000 )
 
-
-
+},2000 )

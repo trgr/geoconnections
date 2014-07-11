@@ -70,7 +70,10 @@ timers.setInterval(function(){
 
     Object.keys(ip_active).forEach(function( item ) {
 	packet = ip_active[item]
-	console.log( packet.last_heard.toString() + "\t\t\t\t" + packet.source + "\t\t\t" + packet.location.country_name )
+	dns.lookup( packet.source, function( err , addr ){
+
+	    console.log( packet.last_heard.toString() + "\t" + packet.source + "\t"+ addr + "\t\t" + packet.location.country_name )
+	})
 	
     })
 

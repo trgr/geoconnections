@@ -43,13 +43,17 @@ var active_connections = {}
 
 console.log( '\u001B[2J\u001B[0;0f' )
 console.log("Started listening ..please wait")
+
 socket.on( "on" , function( buffer , addr ) {    
     createConnectionObject(addr, function(connection_object) {
 	active_connections[addr] = connection_object
     })
     
 })
-socket.on( "message" , function( buffer , addr ) {    
+socket.on( "message" , function( buffer , addr ) {
+    if ( active_connections[addr] )
+	return;
+    
     createConnectionObject(addr, function(connection_object) {
 	active_connections[addr] = connection_object
     })
@@ -60,6 +64,8 @@ socket.on( "close" , function( buffer , addr ) {
 	return
     
     active_connections[addr].lost = new Date();
+    /* Save to DB here */
+
     delete(active_connections[addr])
 })
 
@@ -76,8 +82,6 @@ timers.setInterval(function(){
     })
     for ( var i=0; connection_keys.length > i; i++){
 	connection = active_connections[connection_keys[i]]
-	if (typeof(connection.country_name) == "undefined" )
-	    return;
 	
 	table.push([
 	    connection.source,

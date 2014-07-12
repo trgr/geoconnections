@@ -1,15 +1,9 @@
 var raw       = require( 'raw-socket' )
-var timers    = require ( 'timers' )
+var timers    = require( 'timers' )
 var freegeoip = require( 'node-freegeoip' )
-var columnify = require( 'columnify')
 var dns       = require( 'dns')
-var Table =    require('cli-table');
+var Table     = require( 'cli-table');
 
-var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
-var active_connections = {}
-
-console.log( '\u001B[2J\u001B[0;0f' )
-console.log("Started listening ..please wait")
 function createConnectionObject( addr,callback ){
     var connection = {
 	dns_name  : 'unresolved',
@@ -44,6 +38,13 @@ function createConnectionObject( addr,callback ){
 	})
     })
 }
+
+
+var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
+var active_connections = {}
+
+console.log( '\u001B[2J\u001B[0;0f' )
+console.log("Started listening ..please wait")
 socket.on( "on" , function( buffer , addr ) {
     
     createConnectionObject(addr, function(connection_object) {

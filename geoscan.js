@@ -4,59 +4,59 @@ var freegeoip = require( 'node-freegeoip' )
 var dns       = require( 'dns')
 var Table     = require( 'cli-table');
 
-function createConnectionObject( addr,callback ){
-    var connection = {
-	dns_name  : 'unresolved',
-	source    : addr,
-	country_name : 'unresolved',
-	protocol  : 'TCP',
-	discovered  : new Date(),
-	last_heard : new Date(),
-	lost : false,
-    }
-    
-    dns.reverse(addr,function( err, addresses){
-	connection.dns_name = (err) ? addresses : "Could not resolve"
-	if ( err)
-	    connection.dns_name = "Could not resolve"
-	
-	if ( !addresses)
-	    connection.dns_name = "Resolve Error"
-	else
-	    connection.dns_name = addresses[0]
-
-	
-	
-	freegeoip.getLocation(addr , function( err , location){
-	    if( err )
-		return callback(connection)
-	    
-	    connection.country_name = location.country_name
-	    callback(connection)
-	})
-    })
-}
-
-
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 var active_connections = {}
 
+function Connection( addr) {
+    this.dns_name  = 'unresolved'
+    this.source    = addr
+    this.country_name = 'Unresolved'
+    this.protocol  = 'TCP'
+    this.discovered  = new Date()
+    this.last_heard = new Date()
+    this.lost = false
+}
+Connection.prototype.dnsReverse = function(){
+    var connection = this
+    dns.reverse(connection.source,function( err, addresses){
+	if( !err && addresses)
+	    connection.dns_name = addresses
+	else
+	    connection.dns_name = "Resolve Error"
+    })
+},
+Connection.prototype.geoLookup = function (){
+    var connection = this
+    freegeoip.getLocation(connection.source , function( err , location){
+	if (!err )
+	    connection.country_name = location.country_name
+    })
+}
+
+function addConnection( addr ){
+}
 console.log( '\u001B[2J\u001B[0;0f' )
 console.log("Started listening ..please wait")
 
 socket.on( "on" , function( buffer , addr ) {    
-    createConnectionObject(addr, function(connection_object) {
-	active_connections[addr] = connection_object
-    })
+    active_connections[addr] = new Connection( addr )
+    active_connections[addr].dnsReverse()
+    active_connections[addr].geoLookup()
     
 })
 socket.on( "message" , function( buffer , addr ) {
-    if ( active_connections[addr] )
-	return;
-    
-    createConnectionObject(addr, function(connection_object) {
-	active_connections[addr] = connection_object
-    })
+
+    if ( !active_connections[addr] ){
+	active_connections[addr] = new Connection( addr )
+	active_connections[addr].dnsReverse()
+	active_connections[addr].geoLookup()
+    }
+
+    active_connections[addr].last_seen = new Date()
+
+
+
+
 })
 
 socket.on( "close" , function( buffer , addr ) {
@@ -75,9 +75,9 @@ timers.setInterval(function(){
     var connection_count = connection_keys.length
     
     console.log( '\u001B[2J\u001B[0;0f' )
-
+    
     var table = new Table({
-	head : ['IP','Discovered','Country'],
+	head : ['IP','Discovered','Country','Reverse DNS'],
 	colWidths: [30, 20]
     })
     for ( var i=0; connection_keys.length > i; i++){
@@ -87,6 +87,7 @@ timers.setInterval(function(){
 	    connection.source,
 	    connection.discovered,
 	    connection.country_name,
+	    connection.dns_name,
 	])
     }
     

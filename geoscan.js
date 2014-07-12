@@ -3,7 +3,8 @@ var timers    = require( 'timers' )
 var freegeoip = require( 'node-freegeoip' )
 var dns       = require( 'dns')
 var Table     = require( 'cli-table');
-
+var argv      = require( 'optimist').argv
+var console   = require( 'better-console')
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 var active_connections = {}
 
@@ -71,22 +72,12 @@ timers.setInterval(function(){
     var connection_count = connection_keys.length
     
     console.log( '\u001B[2J\u001B[0;0f' )
-    
-    var table = new Table({
-	head : ['IP','Discovered','Country','Reverse DNS'],
-	colWidths: [30, 20]
-    })
+    console.log( "Connections: " + connection_count )
+    var table_data = []
     for ( var i=0; connection_keys.length > i; i++){
 	connection = active_connections[connection_keys[i]]
-	
-	table.push([
-	    connection.source,
-	    connection.discovered,
-	    connection.country_name,
-	    connection.dns_name,
-	])
+	table_data.push( [connection.source,connection.country_name,connection.dns_name] )
     }
-    
-    console.log(table.toString());
+    console.table( table_data )
     
 },2000 )

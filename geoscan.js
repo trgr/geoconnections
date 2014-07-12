@@ -8,9 +8,7 @@ function createConnectionObject( addr,callback ){
     var connection = {
 	dns_name  : 'unresolved',
 	source    : addr,
-	location  : {
-	    country_name : 'unresolved'
-	},
+	country_name : 'unresolved',
 	protocol  : 'TCP',
 	discovered  : new Date(),
 	last_heard : new Date(),
@@ -31,9 +29,9 @@ function createConnectionObject( addr,callback ){
 	
 	freegeoip.getLocation(addr , function( err , location){
 	    if( err )
-		callback(connection)
+		return callback(connection)
 	    
-	    connection.location = location
+	    connection.country_name = location.country_name
 	    callback(connection)
 	})
     })
@@ -45,8 +43,7 @@ var active_connections = {}
 
 console.log( '\u001B[2J\u001B[0;0f' )
 console.log("Started listening ..please wait")
-socket.on( "on" , function( buffer , addr ) {
-    
+socket.on( "on" , function( buffer , addr ) {    
     createConnectionObject(addr, function(connection_object) {
 	active_connections[addr] = connection_object
     })
@@ -71,23 +68,24 @@ timers.setInterval(function(){
     var connection_keys = Object.keys(active_connections)
     var connection_count = connection_keys.length
     
-    console.log( '\u001B[2J\u001B[0;0f' )    
+    console.log( '\u001B[2J\u001B[0;0f' )
 
     var table = new Table({
-	head : ['Discovered','Country','Address','Reverse DNS'],
+	head : ['IP','Discovered','Country'],
 	colWidths: [30, 20]
     })
     for ( var i=0; connection_keys.length > i; i++){
 	connection = active_connections[connection_keys[i]]
-	table.push([connection.discovered,
-		    connection.location.country_name,
-		    connection.source,
-		    connection.dns_name
-		   ])
+	if (typeof(connection.country_name) == "undefined" )
+	    return;
+	
+	table.push([
+	    connection.source,
+	    connection.discovered,
+	    connection.country_name,
+	])
     }
-
+    
     console.log(table.toString());
     
-    
-
 },2000 )

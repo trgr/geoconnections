@@ -6,31 +6,23 @@ var Table     = require( 'cli-table');
 var argv      = require( 'optimist').argv
 var console   = require( 'better-console')
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
+
 var active_connections = {}
 var all_connections    = {}
 var type = "active"
 
 var stdin = process.stdin;
-stdin.setRawMode(true)
-stdin.resume()
-stdin.setEncoding( 'utf8' );
-stdin.on('data', function (key) {
-    switch(key){
-    case '\u0003':
-	process.exit()
-	break;
-	
-    case "a":
-	type = "active"
-	break
-	
-    case "h":
-	type = "historic"
-	break;
-	
-    }
-    
-});
+
+Array.prototype.sortByProp = function(p){
+ return this.sort(function(a,b){
+  return (a[p] > b[p]) ? 1 : (a[p] < b[p]) ? -1 : 0;
+ });
+}
+
+
+/*
+ *  Represents a connection
+ */
 function Connection( addr) {
     this.dns_name  = 'unresolved'
     this.source    = addr
@@ -41,6 +33,9 @@ function Connection( addr) {
     this.lost = false
     this.bytecount = 0
     this.last_bytecount = 0
+}
+Connection.prototype.getDuration = function(){
+    return this.discovered.getTime() + this.last_heard.getTime()
 }
 Connection.prototype.addToByteCount = function( bytecount ) {
     this.bytecount += bytecount
@@ -66,11 +61,38 @@ Connection.prototype.geoLookup = function (){
 	    connection.country_name = location.country_name
     })
 }
- 
 
+/* Main Thread Entry */
 console.log( '\u001B[2J\u001B[0;0f' )
 console.log("Started listening ..please wait")
 
+/* Start listening for events */
+stdin.setRawMode(true)
+stdin.resume()
+stdin.setEncoding( 'utf8' );
+stdin.on('data', function (key) {
+    switch(key){
+    case '\u0003': /* Ctrl-C */
+	process.exit()
+	break;
+	
+    case "a":
+	type = "active"
+	break
+	
+    case "h":
+	type = "historic"
+	break;
+	
+    }
+    
+});
+ 
+
+
+/* Setup listening for socket on,message,and close*/
+/* Adds incomming Connection objects to active_connections and all_connections */
+/* active_connections are pruned when connections are dropped */
 socket.on( "on" , function( buffer , addr ) {    
 
     active_connections[addr] = new Connection( addr )
@@ -104,7 +126,7 @@ socket.on( "close" , function( buffer , addr ) {
     delete(active_connections[addr])
 })
 
-
+/* Start output to console interval */
 timers.setInterval(function(){
     var connection_hash = {}
     
@@ -128,10 +150,11 @@ timers.setInterval(function(){
 			  "Reverse DNS" : connection.dns_name,
 			  "Total # bytes rcvc" : connection.bytecount,
 			  "Last  # bytes rcvd" : connection.last_bytecount,
-			  "Last heard" : connection.last_heard.toISOString()
+			  "Duration (ms)" : connection.getDuration(),
+			  "Last Seen" : connection.last_seen.getTime()
 		       })
     }
-    
+    table_data.sortByProp('last_seen')
     active_connections = {}
     console.table( table_data )
     

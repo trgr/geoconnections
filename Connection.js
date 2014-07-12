@@ -2,7 +2,7 @@ var freegeoip = require( 'node-freegeoip' )
 var dns       = require( 'dns')
 
 var Connection = function( addr) {
-    this.dns_name  = 'unresolved'
+    this.dnys_name  = 'unresolved'
     this.source    = addr
     this.country_name = 'Unresolved'
     this.protocol  = 'TCP'

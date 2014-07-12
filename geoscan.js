@@ -7,25 +7,14 @@ var mongoose   = require( 'mongoose' )
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 var stdin     = process.stdin;
 
-mongoose.connect("mongodb://localhost/test")
+
 
 /* Include own files*/
 /* */
 var Connection  = require( './Connection.js' )
+var mConnection = require( './ConnectionMongoose.js')
 
 /* If using db, this is the model for Connection objects */
-mongoose.model('mConnection',
-    {
-	dns_name : String,
-	source   : String,
-	country_name : String,
-	protocol : String,
-	discovered : Date,
-	last_heard : Date,
-	lost       : Date,
-	bytecount  : Number,
-	last_bytecount : Number
-    })
 
 /* Set some defaults */
 var active_connections = {}
@@ -113,22 +102,43 @@ socket.on( "close" , function( buffer , addr ) {
     var connection = active_connections[addr]
     connection.lost = new Date();
     /* Save to DB here */
-
-    var connection_model = new mConnection({
-	dns_name : connection.dns_name,
-	source   : connection.source,
-	country_name : connection.country_name,
-	protocol     : connection.protocol,
-	discovered   : connection.discovered,
-	last_heard   : connection.last_heard,
-	lost         : connection.lost,
-	bytecount    : connection.bytecount,
-	last_bytecount : connection.last_bytecount
+    var mConnection= mongoose.model('mConnection',
+    {
+	dns_name : String,
+	source   : String,
+	country_name : String,
+	protocol : String,
+	discovered : Date,
+	last_heard : Date,
+	lost       : Date,
+	bytecount  : Int,
+	last_bytecount : Int
     })
     
-    connection_model.save()
-    console.log("Saved model")
-    delete(active_connections[addr])
+    
+    mongoose.connect("mongodb://localhost/test")
+    var db = mongoose.connection
+    db.once("open",function callback(err){
+	console.log(err)
+	var connection_model = new mConnection({
+	    dns_name : connection.dns_name,
+	    source   : connection.source,
+	    country_name : connection.country_name,
+	    protocol     : connection.protocol,
+	    discovered   : connection.discovered,
+	    last_heard   : connection.last_heard,
+	    lost         : connection.lost,
+	    bytecount    : connection.bytecount,
+	    last_bytecount : connection.last_bytecount
+	})
+	
+	connection_model.save(function(err,cm){
+	    console.log( err )
+	})
+	
+	delete(active_connections[addr])
+    })
+
 })
     
 /* Start output to console interval */
@@ -165,3 +175,4 @@ timers.setInterval(function(){
     
     active_connections = {}
 },2000 )
+

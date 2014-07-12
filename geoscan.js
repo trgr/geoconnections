@@ -16,6 +16,7 @@ function Connection( addr) {
     this.discovered  = new Date()
     this.last_heard = new Date()
     this.lost = false
+    this.bytes = 0
 }
 Connection.prototype.dnsReverse = function(){
     var connection = this
@@ -46,13 +47,13 @@ socket.on( "on" , function( buffer , addr ) {
     
 })
 socket.on( "message" , function( buffer , addr ) {
-
+    
     if ( !active_connections[addr] ){
 	active_connections[addr] = new Connection( addr )
 	active_connections[addr].dnsReverse()
 	active_connections[addr].geoLookup()
     }
-
+    active_connections[addr].bytes += buffer.length
     active_connections[addr].last_seen = new Date()
 })
 
@@ -76,7 +77,10 @@ timers.setInterval(function(){
     var table_data = []
     for ( var i=0; connection_keys.length > i; i++){
 	connection = active_connections[connection_keys[i]]
-	table_data.push( [connection.source,connection.country_name,connection.dns_name] )
+	table_data.push( {"IP" : connection.source,
+			  "Country" : connection.country_name,
+			  "Reverse DNS" : connection.dns_name,
+			 "Bytes Rcvd" : connection.bytes} )
     }
     console.table( table_data )
     

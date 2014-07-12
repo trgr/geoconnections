@@ -1,68 +1,40 @@
 var raw       = require( 'raw-socket' )
 var timers    = require( 'timers' )
-var freegeoip = require( 'node-freegeoip' )
-var dns       = require( 'dns')
 var Table     = require( 'cli-table');
 var argv      = require( 'optimist').argv
 var console   = require( 'better-console')
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
+var stdin     = process.stdin;
 
+/* Include own files*/
+var Connection  = require( './Connection.js' )
+
+/* Set some defaults */
 var active_connections = {}
 var all_connections    = {}
-var type = "active"
+var type               = "active"
+var refresh_time       = 200
 
-var stdin = process.stdin;
-
+/* Add generic sort method to Array type*/
 Array.prototype.sortByProp = function(p){
  return this.sort(function(a,b){
   return (a[p] > b[p]) ? 1 : (a[p] < b[p]) ? -1 : 0;
  });
 }
-
-
-/*
- *  Represents a connection
- */
-function Connection( addr) {
-    this.dns_name  = 'unresolved'
-    this.source    = addr
-    this.country_name = 'Unresolved'
-    this.protocol  = 'TCP'
-    this.discovered  = new Date()
-    this.last_heard = new Date()
-    this.lost = false
-    this.bytecount = 0
-    this.last_bytecount = 0
-}
-Connection.prototype.getDuration = function(){
-    return this.discovered.getTime() + this.last_heard.getTime()
-}
-Connection.prototype.addToByteCount = function( bytecount ) {
-    this.bytecount += bytecount
-    this.last_bytecount = bytecount
-    
-}
-Connection.prototype.getConnectionTime = function(){
-    return (this.last_heard )
-}
-Connection.prototype.dnsReverse = function(){
-    var connection = this
-    dns.reverse(connection.source,function( err, addresses){
-	if( !err && addresses)
-	    connection.dns_name = addresses
-	else
-	    connection.dns_name = "Resolve Error"
-    })
-},
-Connection.prototype.geoLookup = function (){
-    var connection = this
-    freegeoip.getLocation(connection.source , function( err , location){
-	if (!err )
-	    connection.country_name = location.country_name
-    })
-}
-
 /* Main Thread Entry */
+
+/* process some arguments */
+if( argv.help ){
+    console.log("Options")
+    console.log ("\t--output_file=<filename>")
+    console.log ("\t--database_name=<filename>")
+    console.log ("\t--refresh_time=<refresh_time> : In millisenconds")
+    process.exit()
+}
+
+if( argv.refresh_time )
+    refresh_time = argv.refresh_time
+
 console.log( '\u001B[2J\u001B[0;0f' )
 console.log("Started listening ..please wait")
 
@@ -125,7 +97,7 @@ socket.on( "close" , function( buffer , addr ) {
 
     delete(active_connections[addr])
 })
-
+    
 /* Start output to console interval */
 timers.setInterval(function(){
     var connection_hash = {}

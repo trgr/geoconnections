@@ -18,6 +18,9 @@ function Connection( addr) {
     this.lost = false
     this.bytes = 0
 }
+Connection.prototype.getConnectionTime = function(){
+    return (this.last_heard )
+}
 Connection.prototype.dnsReverse = function(){
     var connection = this
     dns.reverse(connection.source,function( err, addresses){
@@ -34,20 +37,19 @@ Connection.prototype.geoLookup = function (){
 	    connection.country_name = location.country_name
     })
 }
+ 
 
-function addConnection( addr ){
-}
 console.log( '\u001B[2J\u001B[0;0f' )
 console.log("Started listening ..please wait")
 
 socket.on( "on" , function( buffer , addr ) {    
+
     active_connections[addr] = new Connection( addr )
     active_connections[addr].dnsReverse()
     active_connections[addr].geoLookup()
     
 })
 socket.on( "message" , function( buffer , addr ) {
-    
     if ( !active_connections[addr] ){
 	active_connections[addr] = new Connection( addr )
 	active_connections[addr].dnsReverse()
@@ -58,6 +60,7 @@ socket.on( "message" , function( buffer , addr ) {
 })
 
 socket.on( "close" , function( buffer , addr ) {
+    console.log("LOST")
     if (!active_connections[addr])
 	return
     
@@ -80,8 +83,11 @@ timers.setInterval(function(){
 	table_data.push( {"IP" : connection.source,
 			  "Country" : connection.country_name,
 			  "Reverse DNS" : connection.dns_name,
-			 "Bytes Rcvd" : connection.bytes} )
+			  "Bytes Rcvd" : connection.bytes,
+			  "Last heard" : connection.last_heard.toISOString()
+		       })
     }
+    active_connections = {}
     console.table( table_data )
     
 },2000 )

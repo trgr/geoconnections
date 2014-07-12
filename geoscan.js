@@ -3,11 +3,29 @@ var timers    = require( 'timers' )
 var Table     = require( 'cli-table');
 var argv      = require( 'optimist').argv
 var console   = require( 'better-console')
+var mongoose   = require( 'mongoose' )
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 var stdin     = process.stdin;
 
+mongoose.connect("mongodb://localhost/test")
+
 /* Include own files*/
+/* */
 var Connection  = require( './Connection.js' )
+
+/* If using db, this is the model for Connection objects */
+mongoose.model('mConnection',
+    {
+	dns_name : String,
+	source   : String,
+	country_name : String,
+	protocol : String,
+	discovered : Date,
+	last_heard : Date,
+	lost       : Date,
+	bytecount  : Number,
+	last_bytecount : Number
+    })
 
 /* Set some defaults */
 var active_connections = {}
@@ -81,6 +99,7 @@ socket.on( "message" , function( buffer , addr ) {
 	active_connections[addr].dnsReverse()
 	active_connections[addr].geoLookup()
     }
+
     active_connections[addr].addToByteCount( buffer.length )
     active_connections[addr].last_seen = new Date()
     
@@ -88,13 +107,27 @@ socket.on( "message" , function( buffer , addr ) {
 })
 
 socket.on( "close" , function( buffer , addr ) {
-    console.log("LOST")
     if (!active_connections[addr])
 	return
     
-    active_connections[addr].lost = new Date();
+    var connection = active_connections[addr]
+    connection.lost = new Date();
     /* Save to DB here */
 
+    var connection_model = new mConnection({
+	dns_name : connection.dns_name,
+	source   : connection.source,
+	country_name : connection.country_name,
+	protocol     : connection.protocol,
+	discovered   : connection.discovered,
+	last_heard   : connection.last_heard,
+	lost         : connection.lost,
+	bytecount    : connection.bytecount,
+	last_bytecount : connection.last_bytecount
+    })
+    
+    connection_model.save()
+    console.log("Saved model")
     delete(active_connections[addr])
 })
     
@@ -127,7 +160,8 @@ timers.setInterval(function(){
 		       })
     }
     table_data.sortByProp('last_seen')
-    active_connections = {}
+    
     console.table( table_data )
     
+    active_connections = {}
 },2000 )

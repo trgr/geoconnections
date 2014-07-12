@@ -39,7 +39,13 @@ function Connection( addr) {
     this.discovered  = new Date()
     this.last_heard = new Date()
     this.lost = false
-    this.bytes = 0
+    this.bytecount = 0
+    this.last_bytecount = 0
+}
+Connection.prototype.addToByteCount = function( bytecount ) {
+    this.bytecount += bytecount
+    this.last_bytecount = bytecount
+    
 }
 Connection.prototype.getConnectionTime = function(){
     return (this.last_heard )
@@ -70,6 +76,7 @@ socket.on( "on" , function( buffer , addr ) {
     active_connections[addr] = new Connection( addr )
     active_connections[addr].dnsReverse()
     active_connections[addr].geoLookup()
+    active_connections[addr].addToByteCount( buffer.length )
     
     all_connections[addr] = active_connections[addr]
     
@@ -80,7 +87,7 @@ socket.on( "message" , function( buffer , addr ) {
 	active_connections[addr].dnsReverse()
 	active_connections[addr].geoLookup()
     }
-    active_connections[addr].bytes += buffer.length
+    active_connections[addr].addToByteCount( buffer.length )
     active_connections[addr].last_seen = new Date()
     
     all_connections[addr] = active_connections[addr]
@@ -119,7 +126,8 @@ timers.setInterval(function(){
 	table_data.push( {"IP" : connection.source,
 			  "Country" : connection.country_name,
 			  "Reverse DNS" : connection.dns_name,
-			  "Bytes Rcvd" : connection.bytes,
+			  "Total # bytes rcvc" : connection.bytecount,
+			  "Last  # bytes rcvd" : connection.last_bytecount,
 			  "Last heard" : connection.last_heard.toISOString()
 		       })
     }

@@ -53,10 +53,6 @@ socket.on( "message" , function( buffer , addr ) {
     }
 
     active_connections[addr].last_seen = new Date()
-
-
-
-
 })
 
 socket.on( "close" , function( buffer , addr ) {

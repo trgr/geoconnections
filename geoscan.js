@@ -21,14 +21,16 @@ var active_connections = {}
 var all_connections    = {}
 var type               = "active"
 var refresh_time       = 200
-var mConnection;
+/* Future mongoose model */
+var mConnection 
+
 /* Add generic sort method to Array type*/
 Array.prototype.sortByProp = function(p){
  return this.sort(function(a,b){
   return (a[p] > b[p]) ? 1 : (a[p] < b[p]) ? -1 : 0;
  });
 }
-/* Main Thread Entry */
+
 
 /* process some arguments */
 if( argv.help ){
@@ -151,5 +153,5 @@ timers.setInterval(function(){
     console.table( table_data )
     
     active_connections = {}
-},2000 )
+},refresh_time )
 

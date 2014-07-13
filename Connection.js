@@ -2,7 +2,7 @@ var freegeoip = require( 'node-freegeoip' )
 var dns       = require( 'dns')
 
 var Connection = function( addr) {
-    this.dnys_name  = 'unresolved'
+    this.dns_name  = 'Unresolved'
     this.source    = addr
     this.country_name = 'Unresolved'
     this.protocol  = 'TCP'
@@ -23,20 +23,26 @@ Connection.prototype.addToByteCount = function( bytecount ) {
 Connection.prototype.getConnectionTime = function(){
     return (this.last_heard )
 }
+Connection.prototype.doAsyncLookups  = function(callback){
+    var connection = this
+    dns.reverse(connection.source,function( err, addresses){
+	connection.dns_name = (!err && addresses) ? addresses : 'Resolve Error'
+	freegeoip.getLocation(connection.source , function( err , location){
+	    connection.country_name = (!err) ? location.country_name : 'Lookup error'
+	    return callback()
+	})
+    })
+}
 Connection.prototype.dnsReverse = function(){
     var connection = this
     dns.reverse(connection.source,function( err, addresses){
-	if( !err && addresses)
-            connection.dns_name = addresses
-        else
-            connection.dns_name = "Resolve Error"
+	connection.dns_name = (!err && addresses) ? addresses : 'Resolve Error'
     })
 }
 Connection.prototype.geoLookup = function (){
     var connection = this
     freegeoip.getLocation(connection.source , function( err , location){
-        if (!err )
-            connection.country_name = location.country_name
+	connection.country_name = (!err) ? location.country_name : 'Lookup error'
     })
 }
 module.exports = Connection

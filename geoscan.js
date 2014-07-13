@@ -12,7 +12,7 @@ var stdin     = process.stdin;
 /* Include own files*/
 /* */
 var Connection  = require( './Connection.js' )
-var mConnection = require( './ConnectionMongoose.js')
+var mConnectionSchema = require( './ConnectionSchema.js')
 
 /* If using db, this is the model for Connection objects */
 
@@ -21,7 +21,7 @@ var active_connections = {}
 var all_connections    = {}
 var type               = "active"
 var refresh_time       = 200
-
+var mConnection;
 /* Add generic sort method to Array type*/
 Array.prototype.sortByProp = function(p){
  return this.sort(function(a,b){
@@ -34,7 +34,7 @@ Array.prototype.sortByProp = function(p){
 if( argv.help ){
     console.log("Options")
     console.log ("\t--output_file=<filename>")
-    console.log ("\t--database_name=<filename>")
+    console.log ("\t--save_db>")
     console.log ("\t--refresh_time=<refresh_time> : In millisenconds")
     process.exit()
 }
@@ -72,75 +72,53 @@ stdin.on('data', function (key) {
 /* Setup listening for socket on,message,and close*/
 /* Adds incomming Connection objects to active_connections and all_connections */
 /* active_connections are pruned when connections are dropped */
-socket.on( "on" , function( buffer , addr ) {    
-
-    active_connections[addr] = new Connection( addr )
-    active_connections[addr].dnsReverse()
-    active_connections[addr].geoLookup()
-    active_connections[addr].addToByteCount( buffer.length )
-    
-    all_connections[addr] = active_connections[addr]
-    
-})
-socket.on( "message" , function( buffer , addr ) {
-    if ( !active_connections[addr] ){
-	active_connections[addr] = new Connection( addr )
-	active_connections[addr].dnsReverse()
-	active_connections[addr].geoLookup()
-    }
-
-    active_connections[addr].addToByteCount( buffer.length )
-    active_connections[addr].last_seen = new Date()
-    
-    all_connections[addr] = active_connections[addr]
-})
-
-socket.on( "close" , function( buffer , addr ) {
-    if (!active_connections[addr])
-	return
-    
-    var connection = active_connections[addr]
-    connection.lost = new Date();
-    /* Save to DB here */
-    var mConnection= mongoose.model('mConnection',
-    {
-	dns_name : String,
-	source   : String,
-	country_name : String,
-	protocol : String,
-	discovered : Date,
-	last_heard : Date,
-	lost       : Date,
-	bytecount  : Int,
-	last_bytecount : Int
+var listener = function(){
+    socket.on( "message" , function( buffer , addr ) {
+	if ( !active_connections[addr] ){
+	    connection = new Connection( addr )
+	    active_connections[addr] = connection
+	    connection.doAsyncLookups(function(){
+		active_connections[addr] = connection
+		if (argv.save_db){
+		    var conn = new mConnection(
+			{
+			    dns_name : connection.dns_name,
+			    source   : connection.source,
+			    country_name : connection.country_name,
+			    protocol : connection.protocol,
+			    discovered : connection.discovered,
+			    last_heard : connection.last_heard,
+			    bytecount  : connection.bytecount,
+			    last_bytecount : connection.last_bytecount
+			}
+		    )
+		    conn.save(function(err, c){
+			
+		    })
+		}
+	    })
+	}
+	
+	active_connections[addr].addToByteCount( buffer.length )
+	active_connections[addr].last_seen = new Date()
+	
+	all_connections[addr] = active_connections[addr]
+	
     })
-    
-    
-    mongoose.connect("mongodb://localhost/test")
+}
+
+if( argv.save_db ){
+    mongoose.connect('mongodb://localhost/geoconnections');
     var db = mongoose.connection
-    db.once("open",function callback(err){
-	console.log(err)
-	var connection_model = new mConnection({
-	    dns_name : connection.dns_name,
-	    source   : connection.source,
-	    country_name : connection.country_name,
-	    protocol     : connection.protocol,
-	    discovered   : connection.discovered,
-	    last_heard   : connection.last_heard,
-	    lost         : connection.lost,
-	    bytecount    : connection.bytecount,
-	    last_bytecount : connection.last_bytecount
-	})
-	
-	connection_model.save(function(err,cm){
-	    console.log( err )
-	})
-	
-	delete(active_connections[addr])
+    db.once( "open" , function(){
+	mConnection = mongoose.model('mConnection',mConnectionSchema)
+	listener()
     })
+}else{
+    listener()
+}
 
-})
-    
+
 /* Start output to console interval */
 timers.setInterval(function(){
     var connection_hash = {}

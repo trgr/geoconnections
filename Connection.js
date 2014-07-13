@@ -7,13 +7,13 @@ var Connection = function( addr) {
     this.country_name = 'Unresolved'
     this.protocol  = 'TCP'
     this.discovered  = new Date()
-    this.last_heard = new Date()
+    this.last_seen = new Date()
     this.lost = false
     this.bytecount = 0
     this.last_bytecount = 0
 }
 Connection.prototype.getDuration = function(){
-    return this.discovered.getTime() + this.last_heard.getTime()
+    return this.discovered.getTime() + this.last_seen.getTime()
 }
 Connection.prototype.addToByteCount = function( bytecount ) {
     this.bytecount += bytecount
@@ -21,7 +21,7 @@ Connection.prototype.addToByteCount = function( bytecount ) {
     
 }
 Connection.prototype.getConnectionTime = function(){
-    return (this.last_heard )
+    return (this.last_seen )
 }
 Connection.prototype.doAsyncLookups  = function(callback){
     var connection = this

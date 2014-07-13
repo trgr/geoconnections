@@ -73,14 +73,17 @@ stdin.on('data', function (key) {
 
 /* Setup listening for socket on,message,and close*/
 /* Adds incomming Connection objects to active_connections and all_connections */
-var listener = function(){
+var listener = function(save_to_db){
     socket.on( "message" , function( buffer , addr ) {
 	if ( !active_connections[addr] ){
 	    connection = new Connection( addr )
+	    
+	    /* Can be displayed before everything is resolved */
 	    active_connections[addr] = connection
 	    connection.doAsyncLookups(function(){
-		active_connections[addr] = connection
-		if (argv.save_db){
+		
+		//active_connections[addr] = connection
+		if (save_to_db){
 		    var conn = new mConnection(
 			{
 			    dns_name : connection.dns_name,
@@ -88,7 +91,7 @@ var listener = function(){
 			    country_name : connection.country_name,
 			    protocol : connection.protocol,
 			    discovered : connection.discovered,
-			    last_heard : connection.last_heard,
+			    last_seen : connection.last_seen,
 			    bytecount  : connection.bytecount,
 			    last_bytecount : connection.last_bytecount
 			}
@@ -98,10 +101,11 @@ var listener = function(){
 		    })
 		}
 	    })
+	}else{
+	    
+	    active_connections[addr].addToByteCount( buffer.length )
+	    active_connections[addr].last_seen = new Date()
 	}
-	
-	active_connections[addr].addToByteCount( buffer.length )
-	active_connections[addr].last_seen = new Date()
 	
 	all_connections[addr] = active_connections[addr]
 	
@@ -113,10 +117,10 @@ if( argv.save_db ){
     var db = mongoose.connection
     db.once( "open" , function(){
 	mConnection = mongoose.model('mConnection',mConnectionSchema)
-	listener()
+	listener(true)
     })
 }else{
-    listener()
+    listener(false)
 }
 
 

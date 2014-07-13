@@ -71,7 +71,6 @@ stdin.on('data', function (key) {
 
 /* Setup listening for socket on,message,and close*/
 /* Adds incomming Connection objects to active_connections and all_connections */
-/* active_connections are pruned when connections are dropped */
 var listener = function(){
     socket.on( "message" , function( buffer , addr ) {
 	if ( !active_connections[addr] ){

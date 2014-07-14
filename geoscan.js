@@ -7,13 +7,17 @@ var mongoose   = require( 'mongoose' )
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 var stdin     = process.stdin;
 
+var LIST_MODE_ENUM = {
+    ACTIVE   : 1,
+    HISTORIC : 2,
+}
 
 
 /* Include own files*/
 /* */
 var Connection  = require( './Connection.js' )
 var mConnectionSchema = require( './ConnectionSchema.js')
-
+var list_mode = LIST_MODE_ENUM.ACTIVE
 /* If using db, this is the model for Connection objects */
 
 /* Set some defaults */
@@ -58,19 +62,17 @@ stdin.on('data', function (key) {
 	break;
 	
     case "a":
-	type = "active"
+	list_mode = LIST_MODE_ENUM.ACTIVE
 	break
 	
     case "h":
-	type = "historic"
+	list_mode = LIST_MODE_ENUM.HISTORIC
 	break;
 	
     }
     
 });
  
-
-
 /* Setup listening for socket on,message,and close*/
 /* Adds incomming Connection objects to active_connections and all_connections */
 var listener = function(save_to_db){
@@ -112,6 +114,7 @@ var listener = function(save_to_db){
     })
 }
 
+
 if( argv.save_db ){
     mongoose.connect('mongodb://localhost/geoconnections');
     var db = mongoose.connection
@@ -128,11 +131,12 @@ if( argv.save_db ){
 timers.setInterval(function(){
     var connection_hash = {}
     
-    if (type == "active")
+
+    if(list_mode == LIST_MODE_ENUM.ACTIVE)
 	connection_hash = active_connections
-    if (type == "historic")
+    if( list_mode == LIST_MODE_ENUM.HISTORIC)
 	connection_hash = all_connections
-		   
+    
     
     var connection_keys = Object.keys(connection_hash)
     var connection_count = connection_keys.length

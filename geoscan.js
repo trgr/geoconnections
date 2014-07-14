@@ -14,7 +14,6 @@ var LIST_MODE_ENUM = {
 
 
 /* Include own files*/
-/* */
 var Connection  = require( './Connection.js' )
 var mConnectionSchema = require( './ConnectionSchema.js')
 var list_mode = LIST_MODE_ENUM.ACTIVE

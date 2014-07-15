@@ -7,16 +7,19 @@ var mongoose   = require( 'mongoose' )
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 var stdin     = process.stdin;
 
-var LIST_MODE_ENUM = {
-    ACTIVE   : 1,
-    HISTORIC : 2,
+var LIST_MODES = {
+    ACTIVE   : {
+	name : "Active"
+    },
+    HISTORIC : {
+	name : "Historic"
+    },
 }
-
 
 /* Include own files*/
 var Connection  = require( './Connection.js' )
 var mConnectionSchema = require( './ConnectionSchema.js')
-var list_mode = LIST_MODE_ENUM.ACTIVE
+var list_mode = LIST_MODES.ACTIVE
 /* If using db, this is the model for Connection objects */
 
 /* Set some defaults */
@@ -61,11 +64,11 @@ stdin.on('data', function (key) {
 	break;
 	
     case "a":
-	list_mode = LIST_MODE_ENUM.ACTIVE
+	list_mode = LIST_MODES.ACTIVE
 	break
 	
     case "h":
-	list_mode = LIST_MODE_ENUM.HISTORIC
+	list_mode = LIST_MODES.HISTORIC
 	break;
 	
     }
@@ -131,9 +134,9 @@ timers.setInterval(function(){
     var connection_hash = {}
     
 
-    if(list_mode == LIST_MODE_ENUM.ACTIVE)
+    if(list_mode == LIST_MODES.ACTIVE)
 	connection_hash = active_connections
-    if( list_mode == LIST_MODE_ENUM.HISTORIC)
+    if( list_mode == LIST_MODES.HISTORIC)
 	connection_hash = all_connections
     
     
@@ -142,7 +145,7 @@ timers.setInterval(function(){
     
     console.log( '\u001B[2J\u001B[0;0f' )
     console.log( "Connections: " + connection_count )
-    console.log( "List Mode : " + type )
+    console.log( "List Mode : " + list_mode.name )
     var table_data = []
     for ( var i=0; connection_keys.length > i; i++){
 	connection = connection_hash[connection_keys[i]]

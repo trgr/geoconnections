@@ -3,9 +3,30 @@ var timers    = require( 'timers' )
 var argv      = require( 'optimist').argv
 var console   = require( 'better-console')
 var mongoose   = require( 'mongoose' )
+
+/* Include own files*/
+var Connection                  = require( './Connection.js' )
+var ConnectionCollection        = require( './ConnectionCollection.js' )
+var mConnectionSchema           = require( './ConnectionSchema.js')
+
+/* Create socket, get stdin*/
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 var stdin     = process.stdin;
 
+/* Future mongoose model */
+var mConnection 
+
+/* Add generic sort method to Array type*/
+Array.prototype.sortByProp = function(p){
+    return this.sort(function(a,b){
+	return (a[p] > b[p]) ? 1 : (a[p] < b[p]) ? -1 : 0;
+    });
+}
+
+/* Set some defaults */
+var connections = new ConnectionCollection()
+var active_connections = {}
+var all_connections    = {}
 
 var LIST_MODES = {
     ACTIVE   : {
@@ -16,30 +37,13 @@ var LIST_MODES = {
     },
 }
 
+/* program options*/
 var options = {
     refresh_time : 1000,
     connection_stay_time : 1000, 
     list_mode : LIST_MODES.ACTIVE,
 }
 
-
-/* Include own files*/
-var Connection  = require( './Connection.js' )
-var mConnectionSchema = require( './ConnectionSchema.js')
-
-/* Set some defaults */
-var active_connections = {}
-var all_connections    = {}
-
-/* Future mongoose model */
-var mConnection 
-
-/* Add generic sort method to Array type*/
-Array.prototype.sortByProp = function(p){
- return this.sort(function(a,b){
-  return (a[p] > b[p]) ? 1 : (a[p] < b[p]) ? -1 : 0;
- });
-}
 
 
 /* process some arguments */
@@ -54,7 +58,7 @@ if( argv.help ){
 if( argv.refresh_time )
     options.refresh_time = argv.refresh_time
 
-console.log( '\u001B[2J\u001B[0;0f' )
+console.clear()
 console.log("Started listening ..please wait")
 
 /* Start listening for events */
@@ -86,8 +90,20 @@ stdin.on('data', function (key) {
     
 });
 
-/* Setup listening for socket on,message,and close*/
+/* Setup listening for socket on 'message' */
 /* Adds incomming Connection objects to active_connections and all_connections */
+
+var newConnection = function(){
+    
+}
+
+socket.on( "message" , function( buffer , addr ){
+    connection = new Connection( addr )
+    connections.addConnection(connection)
+    connection.doAsyncLookups(function(){
+	
+    })
+})
 var listener = function(save_to_db){
     socket.on( "message" , function( buffer , addr ) {
 	if ( !active_connections[addr] ){
@@ -141,7 +157,7 @@ if( argv.save_db ){
 
 
 timers.setInterval(function(){
-    active_connections = {}
+    active_connections = []
 },options.connection_stay_time)
 
 
@@ -156,8 +172,8 @@ timers.setInterval(function(){
 	connection_hash = all_connections
     
     
-    var connection_keys = Object.keys(connection_hash)
-    var connection_count = connection_keys.length
+    var connection_keys = connections.getConnectionKeys()
+    var connection_count = connections.getConnectionCount()
     
     var connection_table_data = []
     var header_table_data     = [
@@ -172,15 +188,15 @@ timers.setInterval(function(){
     console.table( header_table_data ) 
 
     for ( var i=0; connection_keys.length > i; i++){
-	connection = connection_hash[connection_keys[i]]
+	connection = connections.getConnection(connection_keys[i])
 	connection_table_data.push( {"IP" : connection.source,
-			  "Country" : connection.country_name,
-			  "Reverse DNS" : connection.dns_name,
-			  "Total # bytes rcvc" : connection.bytecount,
-			  "Last  # bytes rcvd" : connection.last_bytecount,
-			  "Duration (ms)" : connection.getDuration(),
-			  "Last Seen" : connection.last_seen.getTime()
-		       })
+				     "Country" : connection.country_name,
+				     "Reverse DNS" : connection.dns_name,
+				     "Total # bytes rcvc" : connection.bytecount,
+				     "Last  # bytes rcvd" : connection.last_bytecount,
+				     "Duration (ms)" : connection.getDuration(),
+				     "Last Seen" : connection.last_seen.getTime()
+				    })
     }
     connection_table_data.sortByProp('Last Seen')
     

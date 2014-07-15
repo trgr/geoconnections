@@ -166,7 +166,9 @@ timers.setInterval(function(){
 	    'List mode'   : options.list_mode.name,
 	    'Window refresh rate' : options.refresh_time + "ms"
 	}]
-    console.log( '\u001B[2J\u001B[0;0f' )
+    
+    console.clear()
+
     console.table( header_table_data ) 
 
     for ( var i=0; connection_keys.length > i; i++){

@@ -7,6 +7,7 @@ var mongoose   = require( 'mongoose' )
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 var stdin     = process.stdin;
 
+
 var LIST_MODES = {
     ACTIVE   : {
 	name : "Active"
@@ -16,17 +17,20 @@ var LIST_MODES = {
     },
 }
 
+var options = {
+    refresh_time : 200,
+    list_mode : LIST_MODES.ACTIVE
+}
+
+
 /* Include own files*/
 var Connection  = require( './Connection.js' )
 var mConnectionSchema = require( './ConnectionSchema.js')
-var list_mode = LIST_MODES.ACTIVE
-/* If using db, this is the model for Connection objects */
 
 /* Set some defaults */
 var active_connections = {}
 var all_connections    = {}
-var type               = "active"
-var refresh_time       = 200
+
 /* Future mongoose model */
 var mConnection 
 
@@ -48,7 +52,7 @@ if( argv.help ){
 }
 
 if( argv.refresh_time )
-    refresh_time = argv.refresh_time
+    options.refresh_time = argv.refresh_time
 
 console.log( '\u001B[2J\u001B[0;0f' )
 console.log("Started listening ..please wait")
@@ -64,17 +68,17 @@ stdin.on('data', function (key) {
 	break;
 	
     case "a":
-	list_mode = LIST_MODES.ACTIVE
+	options.list_mode = LIST_MODES.ACTIVE
 	break
 	
     case "h":
-	list_mode = LIST_MODES.HISTORIC
+	options.list_mode = LIST_MODES.HISTORIC
 	break;
 	
     }
     
 });
- 
+
 /* Setup listening for socket on,message,and close*/
 /* Adds incomming Connection objects to active_connections and all_connections */
 var listener = function(save_to_db){
@@ -134,9 +138,9 @@ timers.setInterval(function(){
     var connection_hash = {}
     
 
-    if(list_mode == LIST_MODES.ACTIVE)
+    if(options.list_mode == LIST_MODES.ACTIVE)
 	connection_hash = active_connections
-    if( list_mode == LIST_MODES.HISTORIC)
+    if( options.list_mode == LIST_MODES.HISTORIC)
 	connection_hash = all_connections
     
     
@@ -145,7 +149,8 @@ timers.setInterval(function(){
     
     console.log( '\u001B[2J\u001B[0;0f' )
     console.log( "Connections: " + connection_count )
-    console.log( "List Mode : " + list_mode.name )
+    console.log( "List mode : " + options.list_mode.name )
+    console.log( "Window refresh : " + options.refresh_time +"ms" )
     var table_data = []
     for ( var i=0; connection_keys.length > i; i++){
 	connection = connection_hash[connection_keys[i]]
@@ -163,5 +168,5 @@ timers.setInterval(function(){
     console.table( table_data )
     
     active_connections = {}
-},refresh_time )
+},options.refresh_time )
 

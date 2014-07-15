@@ -1,6 +1,5 @@
 var raw       = require( 'raw-socket' )
 var timers    = require( 'timers' )
-var Table     = require( 'cli-table');
 var argv      = require( 'optimist').argv
 var console   = require( 'better-console')
 var mongoose   = require( 'mongoose' )
@@ -18,8 +17,9 @@ var LIST_MODES = {
 }
 
 var options = {
-    refresh_time : 200,
-    list_mode : LIST_MODES.ACTIVE
+    refresh_time : 1000,
+    connection_stay_time : 1000, 
+    list_mode : LIST_MODES.ACTIVE,
 }
 
 
@@ -75,6 +75,13 @@ stdin.on('data', function (key) {
 	options.list_mode = LIST_MODES.HISTORIC
 	break;
 	
+    case "+":
+	options.refresh_time += 100
+	break;
+	
+    case "-":
+	options.refresh_time -= 100
+	break;
     }
     
 });
@@ -133,6 +140,11 @@ if( argv.save_db ){
 }
 
 
+timers.setInterval(function(){
+    active_connections = {}
+},options.connection_stay_time)
+
+
 /* Start output to console interval */
 timers.setInterval(function(){
     var connection_hash = {}
@@ -147,14 +159,19 @@ timers.setInterval(function(){
     var connection_keys = Object.keys(connection_hash)
     var connection_count = connection_keys.length
     
+    var connection_table_data = []
+    var header_table_data     = [
+	{
+	    'Connections' : connection_count,
+	    'List mode'   : options.list_mode.name,
+	    'Window refresh rate' : options.refresh_time + "ms"
+	}]
     console.log( '\u001B[2J\u001B[0;0f' )
-    console.log( "Connections: " + connection_count )
-    console.log( "List mode : " + options.list_mode.name )
-    console.log( "Window refresh : " + options.refresh_time +"ms" )
-    var table_data = []
+    console.table( header_table_data ) 
+
     for ( var i=0; connection_keys.length > i; i++){
 	connection = connection_hash[connection_keys[i]]
-	table_data.push( {"IP" : connection.source,
+	connection_table_data.push( {"IP" : connection.source,
 			  "Country" : connection.country_name,
 			  "Reverse DNS" : connection.dns_name,
 			  "Total # bytes rcvc" : connection.bytecount,
@@ -163,10 +180,9 @@ timers.setInterval(function(){
 			  "Last Seen" : connection.last_seen.getTime()
 		       })
     }
-    table_data.sortByProp('last_seen')
+    connection_table_data.sortByProp('Last Seen')
     
-    console.table( table_data )
+    console.table( connection_table_data )
     
-    active_connections = {}
 },options.refresh_time )
 

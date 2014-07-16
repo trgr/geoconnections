@@ -44,7 +44,7 @@ function pad(str, size){
 }
 
 /* Set some defaults */
-var all_connections    = []
+var all_connections    = Array()
 
 /* program options*/
 var options = {

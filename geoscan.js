@@ -1,7 +1,6 @@
 var raw       = require( 'raw-socket' )
 var timers    = require( 'timers' )
 var argv      = require( 'optimist').argv
-var console   = require( 'better-console')
 var mongoose   = require( 'mongoose' )
 
 /* Include own files*/
@@ -24,6 +23,9 @@ Array.prototype.sortByProp = function(p){
 
 /* Add generic padding method to String type */
 String.prototype.pad = function(c) { return (c > 0) ? String( this + Array(c).join(" ") ) : this }
+
+/* Extend console to be able to clear screen */
+console.clear = function() { process.stdout.write('\u001B[2J\u001B[0;0f') }
 
 function pad(str, size){
     for ( var  i = 0; size > i; i++)
@@ -150,8 +152,9 @@ timers.setInterval(function(){
     var connection_keys = Object.keys(all_connections)
     var connection_count = connection_keys.length
     
-    console.clear()
 
+    console.clear()
+    
     if( options.verbose_level > 0)
 	console.log( "Connection count : " + connection_count)
 

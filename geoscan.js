@@ -22,6 +22,14 @@ Array.prototype.sortByProp = function(p){
     });
 }
 
+Array.prototype.hasElmWithProp = function(p,v){
+    for(var i = 0; this.length > i; i++){
+	if (this[i][p] == v )
+	    return true
+    }
+    return false
+}
+
 /* Add generic padding method to String type */
 String.prototype.pad = function(c) { return (c > 0) ? String( this + Array(c).join(" ") ) : this }
 
@@ -97,11 +105,13 @@ stdin.on('data', function (key) {
 
 var listener = function(save_to_db){
     socket.on( "message" , function( buffer , addr ) {
-	if ( !all_connections[addr] ){
+	if(!all_connections.hasElmWithProp("source",addr)){
 	    connection = new Connection( addr )
 	    
-	    /* Can be displayed before everything is resolved */
-	    all_connections[addr] = connection
+	    /* Can be displayed before everything is resolved so push reference to all_connections*/
+	    all_connections.push(connection)
+
+	    
 	    connection.doAsyncLookups(function(){
 		
 		if (save_to_db){
@@ -122,10 +132,6 @@ var listener = function(save_to_db){
 		    })
 		}
 	    })
-	}else{
-	    
-	    all_connections[addr].addToByteCount( buffer.length )
-	    all_connections[addr].last_seen = new Date()
 	}
 	
 	all_connections.sortByProp( "last_seen" )
@@ -150,8 +156,7 @@ if( argv.save_db ){
 timers.setInterval(function(){
     
 
-    var connection_keys = Object.keys(all_connections)
-    var connection_count = connection_keys.length
+    var connection_count = all_connections.length
     
 
     console.clear()
@@ -159,8 +164,8 @@ timers.setInterval(function(){
     if( options.verbose_level > 0)
 	console.log( "Connection count : " + connection_count)
 
-    for ( var i=0; connection_keys.length > i; i++){	
-	connection = all_connections[connection_keys[i]]
+    for ( var i=0; connection_count > i; i++){	
+	connection = all_connections[i]
 
 	var ip           = connection.source.pad(options.col_ip_size - connection.source.length) 
 	var country_name = connection.country_name.pad(options.col_country_name_size - connection.country_name.length)

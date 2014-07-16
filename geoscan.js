@@ -6,7 +6,6 @@ var mongoose   = require( 'mongoose' )
 
 /* Include own files*/
 var Connection                  = require( './Connection.js' )
-var ConnectionCollection        = require( './ConnectionCollection.js' )
 var mConnectionSchema           = require( './ConnectionSchema.js')
 
 /* Create socket, get stdin*/
@@ -23,25 +22,28 @@ Array.prototype.sortByProp = function(p){
     });
 }
 
-/* Set some defaults */
-var connections = new ConnectionCollection()
-var active_connections = {}
-var all_connections    = {}
+/* Add generic padding method to String type */
+String.prototype.pad = function(c) { return (c > 0) ? String( this + Array(c).join(" ") ) : this }
 
-var LIST_MODES = {
-    ACTIVE   : {
-	name : "Active"
-    },
-    HISTORIC : {
-	name : "Historic"
-    },
+function pad(str, size){
+    for ( var  i = 0; size > i; i++)
+	str += " "
+
+    return str
 }
+
+/* Set some defaults */
+var all_connections    = []
 
 /* program options*/
 var options = {
     refresh_time : 1000,
     connection_stay_time : 1000, 
-    list_mode : LIST_MODES.ACTIVE,
+    col_delimiter : "\t",
+    col_ip_size : 20,
+    col_country_size : 20,
+    col_reverse_dns_size : 20,
+    verbose_level : 1
 }
 
 
@@ -58,6 +60,12 @@ if( argv.help ){
 if( argv.refresh_time )
     options.refresh_time = argv.refresh_time
 
+if( argv.v )
+    options.verbose_level = 1
+
+if( argv.q ) //Quiet
+    options.verbose_level = 0
+
 console.clear()
 console.log("Started listening ..please wait")
 
@@ -70,15 +78,7 @@ stdin.on('data', function (key) {
     case '\u0003': /* Ctrl-C */
 	process.exit()
 	break;
-	
-    case "a":
-	options.list_mode = LIST_MODES.ACTIVE
-	break
-	
-    case "h":
-	options.list_mode = LIST_MODES.HISTORIC
-	break;
-	
+		
     case "+":
 	options.refresh_time += 100
 	break;
@@ -91,29 +91,16 @@ stdin.on('data', function (key) {
 });
 
 /* Setup listening for socket on 'message' */
-/* Adds incomming Connection objects to active_connections and all_connections */
 
-var newConnection = function(){
-    
-}
-
-socket.on( "message" , function( buffer , addr ){
-    connection = new Connection( addr )
-    connections.addConnection(connection)
-    connection.doAsyncLookups(function(){
-	
-    })
-})
 var listener = function(save_to_db){
     socket.on( "message" , function( buffer , addr ) {
-	if ( !active_connections[addr] ){
+	if ( !all_connections[addr] ){
 	    connection = new Connection( addr )
 	    
 	    /* Can be displayed before everything is resolved */
-	    active_connections[addr] = connection
+	    all_connections[addr] = connection
 	    connection.doAsyncLookups(function(){
 		
-		//active_connections[addr] = connection
 		if (save_to_db){
 		    var conn = new mConnection(
 			{
@@ -134,11 +121,11 @@ var listener = function(save_to_db){
 	    })
 	}else{
 	    
-	    active_connections[addr].addToByteCount( buffer.length )
-	    active_connections[addr].last_seen = new Date()
+	    all_connections[addr].addToByteCount( buffer.length )
+	    all_connections[addr].last_seen = new Date()
 	}
 	
-	all_connections[addr] = active_connections[addr]
+	all_connections.sortByProp( "last_seen" )
 	
     })
 }
@@ -156,51 +143,28 @@ if( argv.save_db ){
 }
 
 
-timers.setInterval(function(){
-    active_connections = []
-},options.connection_stay_time)
-
-
 /* Start output to console interval */
 timers.setInterval(function(){
-    var connection_hash = {}
     
 
-    if(options.list_mode == LIST_MODES.ACTIVE)
-	connection_hash = active_connections
-    if( options.list_mode == LIST_MODES.HISTORIC)
-	connection_hash = all_connections
+    var connection_keys = Object.keys(all_connections)
+    var connection_count = connection_keys.length
     
-    
-    var connection_keys = connections.getConnectionKeys()
-    var connection_count = connections.getConnectionCount()
-    
-    var connection_table_data = []
-    var header_table_data     = [
-	{
-	    'Connections' : connection_count,
-	    'List mode'   : options.list_mode.name,
-	    'Window refresh rate' : options.refresh_time + "ms"
-	}]
+
     
     console.clear()
-
-    console.table( header_table_data ) 
+    if( options.verbose_level > 0)
+	console.log( "Connection count : " + connection_count)
 
     for ( var i=0; connection_keys.length > i; i++){
-	connection = connections.getConnection(connection_keys[i])
-	connection_table_data.push( {"IP" : connection.source,
-				     "Country" : connection.country_name,
-				     "Reverse DNS" : connection.dns_name,
-				     "Total # bytes rcvc" : connection.bytecount,
-				     "Last  # bytes rcvd" : connection.last_bytecount,
-				     "Duration (ms)" : connection.getDuration(),
-				     "Last Seen" : connection.last_seen.getTime()
-				    })
+	
+	connection = all_connections[connection_keys[i]]
+	var ip = connection.source.pad(options.col_ip_size - connection.source.length) 
+	var country_name = connection.country_name.pad(options.col_country_name_size - connection.country_name.length)
+	var dns_name = connection.dns_name.pad(options.col_reverse_dns_size - connection.dns_name.length)
+	var last_seen = connection.last_seen
+	console.log( [last_seen,ip,country_name,dns_name].join(options.col_delimiter) )
     }
-    connection_table_data.sortByProp('Last Seen')
     
-    console.table( connection_table_data )
     
 },options.refresh_time )
-

@@ -26,7 +26,7 @@ Connection.prototype.getConnectionTime = function(){
 Connection.prototype.doAsyncLookups  = function(callback){
     var connection = this
     dns.reverse(connection.source,function( err, addresses){
-	connection.dns_name = (!err && addresses) ? addresses : 'Resolve Error'
+	connection.dns_name = (!err && addresses) ? addresses[0] : 'Resolve Error'
 	freegeoip.getLocation(connection.source , function( err , location){
 	    connection.country_name = (!err) ? location.country_name : 'Lookup error'
 	    return callback()

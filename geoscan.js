@@ -161,7 +161,7 @@ timers.setInterval(function(){
 
     for ( var i=0; connection_keys.length > i; i++){	
 	connection = all_connections[connection_keys[i]]
-	
+
 	var ip           = connection.source.pad(options.col_ip_size - connection.source.length) 
 	var country_name = connection.country_name.pad(options.col_country_name_size - connection.country_name.length)
 	var dns_name     = connection.dns_name.pad(options.col_reverse_dns_size - connection.dns_name.length)

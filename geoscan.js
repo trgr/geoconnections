@@ -37,11 +37,11 @@ var all_connections    = []
 
 /* program options*/
 var options = {
-    refresh_time : 1000,
+    refresh_time : 100,
     connection_stay_time : 1000, 
     col_delimiter : "\t",
-    col_ip_size : 20,
-    col_country_size : 20,
+    col_ip_size : 18,
+    col_country_name_size : 18,
     col_reverse_dns_size : 20,
     verbose_level : 1
 }
@@ -69,7 +69,7 @@ if( argv.q ) //Quiet
 console.clear()
 console.log("Started listening ..please wait")
 
-/* Start listening for events */
+/* Start listening for keyboard events */
 stdin.setRawMode(true)
 stdin.resume()
 stdin.setEncoding( 'utf8' );
@@ -150,19 +150,19 @@ timers.setInterval(function(){
     var connection_keys = Object.keys(all_connections)
     var connection_count = connection_keys.length
     
-
-    
     console.clear()
+
     if( options.verbose_level > 0)
 	console.log( "Connection count : " + connection_count)
 
-    for ( var i=0; connection_keys.length > i; i++){
-	
+    for ( var i=0; connection_keys.length > i; i++){	
 	connection = all_connections[connection_keys[i]]
-	var ip = connection.source.pad(options.col_ip_size - connection.source.length) 
+	
+	var ip           = connection.source.pad(options.col_ip_size - connection.source.length) 
 	var country_name = connection.country_name.pad(options.col_country_name_size - connection.country_name.length)
-	var dns_name = connection.dns_name.pad(options.col_reverse_dns_size - connection.dns_name.length)
-	var last_seen = connection.last_seen
+	var dns_name     = connection.dns_name.pad(options.col_reverse_dns_size - connection.dns_name.length)
+	var last_seen    = connection.last_seen
+	
 	console.log( [last_seen,ip,country_name,dns_name].join(options.col_delimiter) )
     }
     

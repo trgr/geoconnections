@@ -1,8 +1,10 @@
-
-var raw       = require( 'raw-socket' )
+/* Built in */
 var timers    = require( 'timers' )
+
+/* third-party*/
+var raw       = require( 'raw-socket' )
 var argv      = require( 'optimist').argv
-var mongoose   = require( 'mongoose' )
+var mongoose  = require( 'mongoose' )
 
 /* Include own files*/
 var Connection                  = require( './Connection.js' )
@@ -23,10 +25,10 @@ Array.prototype.sortByProp = function(p){
 }
 
 Array.prototype.hasElmWithProp = function(p,v){
-    for(var i = 0; this.length > i; i++){
+    for(var i = 0; this.length > i; i++)
 	if (this[i][p] == v )
 	    return true
-    }
+    
     return false
 }
 

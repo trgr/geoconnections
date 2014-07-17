@@ -13,12 +13,12 @@ var mConnectionSchema           = require( './ConnectionSchema.js' )
 /* Include config */
 var options = require( './config.js' )
 
-/* Create socket, get stdin*/
-var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
-var stdin     = process.stdin;
-
 /* Future mongoose model */
 var mConnection 
+
+var all_connections = Array()
+
+var socket
 
 /* Add generic sort method to Array type*/
 Array.prototype.sortByProp = function(p){
@@ -58,18 +58,24 @@ function JSONFormatConnection(connectionObject){
     return JSON.stringify( [last_seen,ip,country_name,dns_name] )
 }
 
+function showHelp(message,exit){
+    if( message.length > 0 )
+	console.warn( message )
+    
+    console.log( "Options" )
+    console.log( "--unique\t Connection is only listed when it first appears." )
+    console.log( "--save_db\t Store connections data in a database" )
+    console.log( "--output_json\t Outputs a JSON encoded array instead of human readable / console formated" )
+    
+    if(exit)
+	process.exit()
+}
 
-/* Set some defaults */
-var all_connections    = Array()
+
 
 /* process some arguments */
-if( argv.help ){
-    console.log( "Options" )
-    console.log( "\t--output_file=<filename>" )
-    console.log( "\t--save_db>" )
-    console.log( "\t --output_json" )
-    process.exit()
-}
+if( argv.help )
+    showHelp("",true)
 
 
 if( argv.v )
@@ -80,6 +86,14 @@ if( argv.q ) //Quiet
 
 if( argv.output_json)
     options.output_json = true
+
+
+if( process.getuid() != 0 ) /* Check if we're root*/
+    showHelp("raw-sockets requires root priveliges",true)
+
+
+/* Create socket */
+socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 
 
 /* Setup listening for socket on 'message' */

@@ -8,8 +8,10 @@ var mongoose  = require( 'mongoose' )
 
 /* Include own files*/
 var Connection                  = require( './Connection.js' )
-var mConnectionSchema           = require( './ConnectionSchema.js')
+var mConnectionSchema           = require( './ConnectionSchema.js' )
 
+/* Include config */
+var options = require( './config.js' )
 /* Create socket, get stdin*/
 var socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 var stdin     = process.stdin;
@@ -48,19 +50,6 @@ function pad(str, size){
 /* Set some defaults */
 var all_connections    = Array()
 
-/* program options*/
-var options = {
-    refresh_time : 100,
-    connection_stay_time : 1000, 
-    col_delimiter : "\t",
-    col_ip_size : 18,
-    col_country_name_size : 18,
-    col_reverse_dns_size : 20,
-    verbose_level : 1
-}
-
-
-
 /* process some arguments */
 if( argv.help ){
     console.log("Options")
@@ -78,6 +67,9 @@ if( argv.v )
 
 if( argv.q ) //Quiet
     options.verbose_level = 0
+
+if( argv.output_json)
+    options.output_json = true
 
 console.clear()
 console.log("Started listening ..please wait")
@@ -153,29 +145,34 @@ if( argv.save_db ){
     listener(false)
 }
 
+function consoleFormatConnection(connectionObject){
+    var ip           = connectionObject.source.pad(options.col_ip_size - connectionObject.source.length) 
+    var country_name = connectionObject.country_name.pad(options.col_country_name_size - connectionObject.country_name.length)
+    var dns_name     = connectionObject.dns_name.pad(options.col_reverse_dns_size - connectionObject.dns_name.length)
+    var last_seen    = connectionObject.last_seen
+    return [last_seen,ip,country_name,dns_name]
+}
 
+function JSONFormatConnection(connectionObject){
+    var ip           = connectionObject.source
+    var country_name = connectionObject.country_name
+    var dns_name     = connectionObject.dns_name
+    var last_seen    = connectionObject.last_seen
+    return JSON.stringify( [last_seen,ip,country_name,dns_name] )
+}
 /* Start output to console interval */
 timers.setInterval(function(){
     
-
     var connection_count = all_connections.length
-    
-
     console.clear()
     
     if( options.verbose_level > 0)
 	console.log( "Connection count : " + connection_count)
-
-    for ( var i=0; connection_count > i; i++){	
-	connection = all_connections[i]
-
-	var ip           = connection.source.pad(options.col_ip_size - connection.source.length) 
-	var country_name = connection.country_name.pad(options.col_country_name_size - connection.country_name.length)
-	var dns_name     = connection.dns_name.pad(options.col_reverse_dns_size - connection.dns_name.length)
-	var last_seen    = connection.last_seen
-	
-	console.log( [last_seen,ip,country_name,dns_name].join(options.col_delimiter) )
-    }
     
+    for ( var i=0; connection_count > i; i++)
+	if ( options.output_json )
+	    console.log( JSONFormatConnection( all_connections[i] ) )
+        else
+	    console.log( consoleFormatConnection( all_connections[i] ).join(options.col_delimiter) )
     
 },options.refresh_time )

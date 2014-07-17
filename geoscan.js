@@ -35,6 +35,14 @@ Array.prototype.hasElmWithProp = function(p,v){
     return false
 }
 
+Array.prototype.has = function(f){
+    for( var i = 0; this.length > i; i++ )
+	if( f(this[i]) )
+	    return true
+    return false
+}
+
+
 /* Add generic padding method to String type */
 String.prototype.pad = function(c) { return (c > 0) ? String( this + Array(c).join(" ") ) : this }
 
@@ -46,7 +54,7 @@ function consoleFormatConnection(connectionObject){
     var ip           = connectionObject.source.pad(options.col_ip_size - connectionObject.source.length) 
     var country_name = connectionObject.country_name.pad(options.col_country_name_size - connectionObject.country_name.length)
     var dns_name     = connectionObject.dns_name.pad(options.col_reverse_dns_size - connectionObject.dns_name.length)
-    var last_seen    = connectionObject.last_seen
+    var last_seen    = connectionObject.last_seen.getTime()
     return [last_seen,ip,country_name,dns_name]
 }
 
@@ -96,16 +104,26 @@ if( process.getuid() != 0 ) /* Check if we're root*/
 socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 
 
-/* Setup listening for socket on 'message' */
+var ignore = []
 
+/* Setup listening for socket on 'message' */
 var listener = function(save_to_db){
     socket.on( "message" , function( buffer , addr ) {
-	if(!all_connections.hasElmWithProp("source",addr)){
+	if (ignore[addr] == true)
+	    return
+	
+	ignore[addr] = true
+	
+	if(!all_connections.has(function(elm){
+	    t = new Date().getTime() - 100000
+	    if (  elm.last_seen > t && elm.source == addr)
+		return true
+	}) ) {
+	    
 	    connection = new Connection( addr )
-	    
 	    all_connections.push(connection)
-	    
-	    connection.doAsyncLookups(function(){
+	    delete( ignore[addr] )
+	    connection.doAsyncLookups(function(){		
 		if ( options.output_json )
 		    console.log( JSONFormatConnection( connection ) )
 		else
@@ -132,9 +150,7 @@ var listener = function(save_to_db){
 		}
 	    })
 	}
-	
-	all_connections.sortByProp( "last_seen" )
-	
+	delete( ignore[addr] )	
     })
 }
 

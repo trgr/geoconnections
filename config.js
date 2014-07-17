@@ -5,5 +5,6 @@ module.exports = {
     col_country_name_size : 18,
     col_reverse_dns_size : 20,
     verbose_level : 1,
-    output_json : false
+    output_json : false,
+    idle_time: 10
 }

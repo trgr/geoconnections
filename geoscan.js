@@ -54,7 +54,7 @@ function consoleFormatConnection(connectionObject){
     var ip           = connectionObject.source.pad(options.col_ip_size - connectionObject.source.length) 
     var country_name = connectionObject.country_name.pad(options.col_country_name_size - connectionObject.country_name.length)
     var dns_name     = connectionObject.dns_name.pad(options.col_reverse_dns_size - connectionObject.dns_name.length)
-    var last_seen    = connectionObject.last_seen.getTime()
+    var last_seen    = connectionObject.last_seen
     return [last_seen,ip,country_name,dns_name]
 }
 
@@ -106,63 +106,33 @@ socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 
 var ignore = []
 
-/* Setup listening for socket on 'message' */
-var listener = function(save_to_db){
-    socket.on( "message" , function( buffer , addr ) {
-	if (ignore[addr] == true)
+
+socket.on( "message" , function( buffer , addr ){
+    
+    if ( ignore[addr] ) 
+	return
+    
+    ignore[addr] = true /* This is not needed anymore*/
+    var conn = new Connection( addr )
+    conns_count = all_connections.length
+    
+    var t = new Date().getTime() - options.connection_idle_time
+    
+    for( var i = 0; conns_count > i; i++ ){
+	if(all_connections[i].source == addr && all_connections[i].last_seen.getTime() > t ){
+	    delete ( ignore[addr] )
 	    return
-	
-	ignore[addr] = true
-	
-	if(!all_connections.has(function(elm){
-	    t = new Date().getTime() - 100000
-	    if (  elm.last_seen > t && elm.source == addr)
-		return true
-	}) ) {
-	    
-	    connection = new Connection( addr )
-	    all_connections.push(connection)
-	    delete( ignore[addr] )
-	    connection.doAsyncLookups(function(){		
-		if ( options.output_json )
-		    console.log( JSONFormatConnection( connection ) )
-		else
-		    console.log( consoleFormatConnection( connection ).join(options.col_delimiter) )		
-		
-		if (save_to_db){
-
-		    
-		    var conn = new mConnection(
-			{
-			    dns_name : connection.dns_name,
-			    source   : connection.source,
-			    country_name : connection.country_name,
-			    protocol : connection.protocol,
-			    discovered : connection.discovered,
-			    last_seen : connection.last_seen,
-			    bytecount  : connection.bytecount,
-			    last_bytecount : connection.last_bytecount
-			}
-		    )
-		    conn.save(function(err, c){
-			
-		    })
-		}
-	    })
 	}
-	delete( ignore[addr] )	
+    }
+    
+    all_connections.push( conn )
+    conn.doAsyncLookups(function(){	
+	console.log( consoleFormatConnection( conn ).join(options.col_delimiter) )	
+	delete ( ignore[addr] )
+
     })
-}
+    
+})
 
 
-if( argv.save_db ){
-    mongoose.connect('mongodb://localhost/geoconnections');
-    var db = mongoose.connection
-    db.once( "open" , function(){
-	mConnection = mongoose.model('mConnection',mConnectionSchema)
-	listener(true)
-    })
-}else{
-    listener(false)
-}
 

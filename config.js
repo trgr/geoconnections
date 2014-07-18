@@ -6,5 +6,5 @@ module.exports = {
     col_reverse_dns_size : 20,
     verbose_level : 1,
     output_json : false,
-    idle_time: 10
+    connection_idle_time: 100000 /* 10s*/
 }

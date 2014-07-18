@@ -103,33 +103,22 @@ if( process.getuid() != 0 ) /* Check if we're root*/
 /* Create socket */
 socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 
-
 var ignore = []
-
 
 socket.on( "message" , function( buffer , addr ){
     
-    if ( ignore[addr] ) 
-	return
-    
-    ignore[addr] = true /* This is not needed anymore*/
     var conn = new Connection( addr )
     conns_count = all_connections.length
     
+    /* If we know of this address and it's idle_time has not passed since it was last seen */
     var t = new Date().getTime() - options.connection_idle_time
-    
-    for( var i = 0; conns_count > i; i++ ){
-	if(all_connections[i].source == addr && all_connections[i].last_seen.getTime() > t ){
-	    delete ( ignore[addr] )
+    for( var i = 0; conns_count > i; i++ ) 
+	if(all_connections[i].source == addr && all_connections[i].last_seen.getTime() > t )
 	    return
-	}
-    }
     
     all_connections.push( conn )
     conn.doAsyncLookups(function(){	
 	console.log( consoleFormatConnection( conn ).join(options.col_delimiter) )	
-	delete ( ignore[addr] )
-
     })
     
 })

@@ -85,7 +85,6 @@ function showHelp(message,exit){
 if( argv.help )
     showHelp("",true)
 
-
 if( argv.v )
     options.verbose_level = 1
 
@@ -95,15 +94,12 @@ if( argv.q ) //Quiet
 if( argv.output_json)
     options.output_json = true
 
-
 if( process.getuid() != 0 ) /* Check if we're root*/
-    showHelp("raw-sockets requires root priveliges",true)
+    showHelp(argv['$0'] + " requires root priveliges for raw socket.",true)
 
-
+console.log(argv)
 /* Create socket */
 socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
-
-var ignore = []
 
 socket.on( "message" , function( buffer , addr ){
     
@@ -122,6 +118,3 @@ socket.on( "message" , function( buffer , addr ){
     })
     
 })
-
-
-

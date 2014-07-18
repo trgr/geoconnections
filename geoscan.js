@@ -20,29 +20,6 @@ var all_connections = Array()
 
 var socket
 
-/* Add generic sort method to Array type*/
-Array.prototype.sortByProp = function(p){
-    return this.sort(function(a,b){
-	return (a[p] > b[p]) ? 1 : (a[p] < b[p]) ? -1 : 0;
-    });
-}
-
-Array.prototype.hasElmWithProp = function(p,v){
-    for(var i = 0; this.length > i; i++)
-	if (this[i][p] == v )
-	    return true
-    
-    return false
-}
-
-Array.prototype.has = function(f){
-    for( var i = 0; this.length > i; i++ )
-	if( f(this[i]) )
-	    return true
-    return false
-}
-
-
 /* Add generic padding method to String type */
 String.prototype.pad = function(c) { return (c > 0) ? String( this + Array(c).join(" ") ) : this }
 
@@ -58,7 +35,7 @@ function consoleFormatConnection(connectionObject){
     return [last_seen,ip,country_name,dns_name]
 }
 
-function JSONFormatConnection(connectionObject){
+function consoleFormatJSON(connectionObject){
     var ip           = connectionObject.source
     var country_name = connectionObject.country_name
     var dns_name     = connectionObject.dns_name
@@ -97,7 +74,7 @@ if( argv.output_json)
 if( process.getuid() != 0 ) /* Check if we're root*/
     showHelp(argv['$0'] + " requires root priveliges for raw socket.",true)
 
-console.log(argv)
+
 /* Create socket */
 socket    = raw.createSocket( { protocol : raw.Protocol.TCP } )
 
@@ -114,7 +91,10 @@ socket.on( "message" , function( buffer , addr ){
     
     all_connections.push( conn )
     conn.doAsyncLookups(function(){	
-	console.log( consoleFormatConnection( conn ).join(options.col_delimiter) )	
+	if( options.output_json )
+	    console.log( consoleFormatJSON( conn ) )
+	else
+	    console.log( consoleFormatConnection( conn ).join(options.col_delimiter) )	
     })
     
 })
